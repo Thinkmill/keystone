@@ -2,6 +2,9 @@ var keystone = require('../../../');
 var util = require('util');
 var http = require('http');
 var FieldType = require('../Type');
+var Path = require('path');
+
+const apiVersion = require( Path.normalize(__dirname + '/../../../../../../package.json')).version;
 
 /**
  * Iframely FieldType Constructor
@@ -54,13 +57,13 @@ iframely.prototype.addToSchema = function (schema) {
 	var field = this;
 
 	this.paths = {
+		APIversion: this.path + '.APIversion',
 		exists: this.path + '.exists',
-		type: this.path + '.type',
 		title: this.path + '.title',
 		url: this.path + '.url',
 		width: this.path + '.width',
 		height: this.path + '.height',
-		version: this.path + '.version',
+		// version: this.path + '.version',
 		description: this.path + '.description',
 		html: this.path + '.html',
 		authorName: this.path + '.authorName',
@@ -69,17 +72,18 @@ iframely.prototype.addToSchema = function (schema) {
 		thumbnailUrl: this.path + '.thumbnailUrl',
 		thumbnailWidth: this.path + '.thumbnailWidth',
 		thumbnailHeight: this.path + '.thumbnailHeight',
+		rel: this.path + '.rel',
 	};
 
 	schema.nested[this.path] = true;
 	schema.add({
+		apiVersion: String,
 		exists: Boolean,
-		type: String,
 		title: String,
 		url: String,
 		width: Number,
 		height: Number,
-		version: String,
+		// version: String,
 		description: String,
 		html: String,
 		authorName: String,
@@ -88,15 +92,16 @@ iframely.prototype.addToSchema = function (schema) {
 		thumbnailUrl: String,
 		thumbnailWidth: Number,
 		thumbnailHeight: Number,
+		rel: String,
 	}, this.path + '.');
 
 	// Bind the pre-save hook to hit the iframely api if the source path has changed
-
+	
 	schema.pre('save', function (next) {
 
-		if (!this.isModified(field.fromPath)) {
-			return next();
-		}
+		// if (!this.isModified(field.fromPath)) {
+		// 	return next();
+		// }
 
 		var fromValue = this.get(field.fromPath);
 
@@ -107,9 +112,9 @@ iframely.prototype.addToSchema = function (schema) {
 
 		var post = this;
 
-		const QUERY_STRING = 'iframe=1&omit_script=1';
+		const QUERY_STRING = '&iframe=1&omit_script=true';
 		const IFRAMELY_API_KEY = keystone.get('iframely api key');
-		const URL = `http://iframe.ly/api/oembed?url=${fromValue}&api_key=${IFRAMELY_API_KEY}&${QUERY_STRING}`;
+		const URL = `http://23.23.16.120/api/iframely?url=${fromValue}&api_key=${IFRAMELY_API_KEY}&${QUERY_STRING}`;
 
 		http.get(URL, res => {
 			res.setEncoding('utf8');
@@ -124,30 +129,63 @@ iframely.prototype.addToSchema = function (schema) {
 				try {
 					body = JSON.parse(body);
 				} catch (e) {
-					console.error('Iframely Parsing Error:', e);
+					// console.error('Iframely Parsing Error:', e, 'on URL:', URL);
+					// console.log('Iframely Parsing Error on URL:', fromValue);
 					field.reset(post);
-					return next();
+					return next(e);
 				}
 
 				if (body.error) {
 					field.reset(post);
 				} else {
+					let data = {
+						rel: [],
+						html: null,
+					};
+
+					let meta = {
+						title: null,
+						author: null,
+						authorUrl: null,
+						description: null,
+						site: null,
+					};
+
+					data = Object.assign(data, body);
+					data.meta = Object.assign(meta, body.meta);
+					data.links = {
+						thumbnail: [{
+							href: null,
+							media: {
+								width: null,
+								height: null,
+							},
+						}],
+					};
+
+					if( body.links.thumbnail !== undefined ) {
+						data.links.thumbnail[0] = Object.assign(data.links.thumbnail[0], body.links.thumbnail[0]);
+						data.links.thumbnail[0].media = Object.assign(data.links.thumbnail[0].media, body.links.thumbnail[0].media);
+					}
+
 					post.set(field.path, {
+						apiVersion: apiVersion,
 						exists: true,
-						type: body.type,
-						title: body.title,
-						url: body.url,
-						width: body.width,
-						height: body.height,
-						version: body.version,
-						description: body.description,
-						html: body.html,
-						authorName: body.author,
-						authorUrl: body.author_url,
-						providerName: body.provider_name,
-						thumbnailUrl: body.thumbnail_url,
-						thumbnailWidth: body.thumbnail_width,
-						thumbnailHeight: body.thumbnail_height,
+						// type: body.type, //doesn't exist in iFramely
+						title: data.meta.title,
+						url: data.url,
+						width: data.links.thumbnail[0].media.width,
+						height: data.links.thumbnail[0].media.height,
+						// version: data.version, //doesn't exist in iFramely
+						description: data.meta.description,
+						html: data.html,
+						authorName: data.meta.author,
+						authorUrl: data.meta.author_url,
+						providerName: data.meta.site,
+						thumbnailUrl: data.links.thumbnail[0].href,
+						thumbnailWidth: data.links.thumbnail[0].media.width,
+						thumbnailHeight: data.links.thumbnail[0].media.height,
+						rel: String(data.rel),
 					});
 				}
 				return next();
@@ -165,13 +203,13 @@ iframely.prototype.addToSchema = function (schema) {
  */
 iframely.prototype.reset = function (item) {
 	return item.set(item.set(this.path, {
+		apiVersion: false,
 		exists: false,
-		type: null,
 		title: null,
 		url: null,
 		width: null,
 		height: null,
-		version: null,
+		// version: null,
 		description: null,
 		html: null,
 		authorName: null,
@@ -180,6 +218,7 @@ iframely.prototype.reset = function (item) {
 		thumbnailUrl: null,
 		thumbnailWidth: null,
 		thumbnailHeight: null,
+		rel: null,
 	}));
 };
 
@@ -232,13 +271,14 @@ iframely.prototype.updateItem = function (item, data, callback) {
  // A conditional has been added to negate updating this item should the fromPath on the passed in data object be the same as that on the item.
 	if (data[this.fromPath] !== item[this.fromPath]) {
 		item.set(item.set(this.path, {
+			apiVersion: data[this.paths.apiVersion],
 			exists: data[this.paths.exists],
-			type: data[this.paths.type],
+			// type: data[this.paths.type],
 			title: data[this.paths.title],
 			url: data[this.paths.url],
 			width: data[this.paths.width],
 			height: data[this.paths.height],
-			version: data[this.paths.version],
+			// version: data[this.paths.version],
 			description: data[this.paths.description],
 			html: data[this.paths.html],
 			authorName: data[this.paths.authorName],
@@ -247,6 +287,7 @@ iframely.prototype.updateItem = function (item, data, callback) {
 			thumbnailUrl: data[this.paths.thumbnailUrl],
 			thumbnailWidth: data[this.paths.thumbnailWidth],
 			thumbnailHeight: data[this.paths.thumbnailHeight],
+			rel: data[this.paths.rel],
 		}));
 	}
 	process.nextTick(callback);
