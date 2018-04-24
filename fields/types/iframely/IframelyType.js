@@ -96,7 +96,7 @@ iframely.prototype.addToSchema = function (schema) {
 	}, this.path + '.');
 
 	// Bind the pre-save hook to hit the iframely api if the source path has changed
-	
+
 	schema.pre('save', function (next) {
 
 		// if (!this.isModified(field.fromPath)) {
@@ -114,7 +114,7 @@ iframely.prototype.addToSchema = function (schema) {
 
 		const QUERY_STRING = '&iframe=1&omit_script=true';
 		const IFRAMELY_API_KEY = keystone.get('iframely api key');
-		const URL = `http://23.23.16.120/api/iframely?url=${fromValue}&api_key=${IFRAMELY_API_KEY}&${QUERY_STRING}`;
+		const URL = `http://iframe.ly/api/iframely?url=${fromValue}&api_key=${IFRAMELY_API_KEY}&${QUERY_STRING}`;
 
 		http.get(URL, res => {
 			res.setEncoding('utf8');
