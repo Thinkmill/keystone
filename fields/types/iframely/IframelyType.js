@@ -116,81 +116,94 @@ iframely.prototype.addToSchema = function (schema) {
 		const IFRAMELY_API_KEY = keystone.get('iframely api key');
 		const URL = `http://iframe.ly/api/iframely?url=${fromValue}&api_key=${IFRAMELY_API_KEY}&${QUERY_STRING}`;
 
-		http.get(URL, res => {
-			res.setEncoding('utf8');
-			let body = '';
-			res.on('error', err => {
-				console.error('Iframely API Error:', err);
-				field.reset(post);
-				return next();
-			});
-			res.on('data', data => (body += data));
-			res.on('end', () => {
-				try {
-					body = JSON.parse(body);
-				} catch (e) {
-					// console.error('Iframely Parsing Error:', e, 'on URL:', URL);
-					// console.log('Iframely Parsing Error on URL:', fromValue);
+		let attemptCount = 0;
+
+		const requestUrl = () => {
+			http.get(URL, res => {
+				res.setEncoding('utf8');
+				let body = '';
+				res.on('error', err => {
+					console.error('Iframely API Error:', err);
 					field.reset(post);
-					return next(e);
-				}
-
-				if (body.error) {
-					field.reset(post);
-				} else {
-					let data = {
-						rel: [],
-						html: null,
-					};
-
-					let meta = {
-						title: null,
-						author: null,
-						authorUrl: null,
-						description: null,
-						site: null,
-					};
-
-					data = Object.assign(data, body);
-					data.meta = Object.assign(meta, body.meta);
-					data.links = {
-						thumbnail: [{
-							href: null,
-							media: {
-								width: null,
-								height: null,
-							},
-						}],
-					};
-
-					if( body.links.thumbnail !== undefined ) {
-						data.links.thumbnail[0] = Object.assign(data.links.thumbnail[0], body.links.thumbnail[0]);
-						data.links.thumbnail[0].media = Object.assign(data.links.thumbnail[0].media, body.links.thumbnail[0].media);
+					return next();
+				});
+				res.on('data', data => (body += data));
+				res.on('end', () => {
+					try {
+						body = JSON.parse(body);
+						// console.log(`Iframely Parsed the URL: ${fromValue}`);
+					} catch (e) {
+						console.log(`Iframely Declined the URL: ${fromValue}`);
+						if (attemptCount < 2) {
+							attemptCount++;
+							console.log(`Iframely Attempt for URL: ${attemptCount}`);
+							return requestUrl();
+						}
+						console.log(`----> Iframely giving up for URL: ${fromValue}`);
+						field.reset(post);
+						return next();
 					}
 
-					post.set(field.path, {
-						apiVersion: apiVersion,
-						exists: true,
-						// type: body.type, //doesn't exist in iFramely
-						title: data.meta.title,
-						url: data.url,
-						width: data.links.thumbnail[0].media.width,
-						height: data.links.thumbnail[0].media.height,
-						// version: data.version, //doesn't exist in iFramely
-						description: data.meta.description,
-						html: data.html,
-						authorName: data.meta.author,
-						authorUrl: data.meta.author_url,
-						providerName: data.meta.site,
-						thumbnailUrl: data.links.thumbnail[0].href,
-						thumbnailWidth: data.links.thumbnail[0].media.width,
-						thumbnailHeight: data.links.thumbnail[0].media.height,
-						rel: String(data.rel),
-					});
-				}
-				return next();
+					if (body.error) {
+						field.reset(post);
+					} else {
+						let data = {
+							rel: [],
+							html: null,
+						};
+
+						let meta = {
+							title: null,
+							author: null,
+							authorUrl: null,
+							description: null,
+							site: null,
+						};
+
+						data = Object.assign(data, body);
+						data.meta = Object.assign(meta, body.meta);
+						data.links = {
+							thumbnail: [{
+								href: null,
+								media: {
+									width: null,
+									height: null,
+								},
+							}],
+						};
+
+						if( body.links.thumbnail !== undefined ) {
+							data.links.thumbnail[0] = Object.assign(data.links.thumbnail[0], body.links.thumbnail[0]);
+							data.links.thumbnail[0].media = Object.assign(data.links.thumbnail[0].media, body.links.thumbnail[0].media);
+						}
+
+						post.set(field.path, {
+							apiVersion: apiVersion,
+							exists: true,
+							// type: body.type, //doesn't exist in iFramely
+							title: data.meta.title,
+							url: data.url,
+							width: data.links.thumbnail[0].media.width,
+							height: data.links.thumbnail[0].media.height,
+							// version: data.version, //doesn't exist in iFramely
+							description: data.meta.description,
+							html: data.html,
+							authorName: data.meta.author,
+							authorUrl: data.meta.author_url,
+							providerName: data.meta.site,
+							thumbnailUrl: data.links.thumbnail[0].href,
+							thumbnailWidth: data.links.thumbnail[0].media.width,
+							thumbnailHeight: data.links.thumbnail[0].media.height,
+							rel: String(data.rel),
+						});
+					}
+					return next();
+				});
 			});
-		});
+		}
+
+		return requestUrl();
+
 	});
 
 	this.bindUnderscoreMethods();
