@@ -103,7 +103,9 @@ iframely.prototype.addToSchema = function (schema) {
 		// 	return next();
 		// }
 
-		var fromValue = this.get(field.fromPath);
+		var fromValueRaw = this.get(field.fromPath);
+		// Include url parameter ?iframely=more to force Youtube videos NOT show summary cards.
+		var fromValue = fromValueRaw.includes('youtube.com') ? `${fromValueRaw}?iframely=more` : fromValueRaw;
 
 		if (!fromValue) {
 			field.reset(this);
