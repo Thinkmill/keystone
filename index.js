@@ -68,7 +68,7 @@ var Keystone = function () {
 	this.set('google server api key', process.env.GOOGLE_SERVER_KEY);
 	this.set('ga property', process.env.GA_PROPERTY);
 	this.set('ga domain', process.env.GA_DOMAIN);
-	this.set('gtm code', process.env.GTM.CODE);
+	this.set('gtm code', process.env.GTM_CODE);
 	this.set('chartbeat property', process.env.CHARTBEAT_PROPERTY);
 	this.set('chartbeat domain', process.env.CHARTBEAT_DOMAIN);
 	this.set('allowed ip ranges', process.env.ALLOWED_IP_RANGES);
