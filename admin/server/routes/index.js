@@ -70,6 +70,7 @@ module.exports = function IndexRoute (req, res) {
 			property: keystone.get('ga property'),
 			domain: keystone.get('ga domain'),
 		},
+		gtmCode: keystone.get('gtm code'),
 		keystone: keystoneData,
 		title: keystone.get('name') || 'Keystone',
 	};

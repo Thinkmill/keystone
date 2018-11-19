@@ -29,6 +29,14 @@ The second argument of `set` here should be a function that takes in keystone's 
 
 ## Services
 
+### Google Tag Manager
+
+Keystone has support for Google Tag manager tracking in the Admin UI. To enable tracking, set the following configuration options:
+
+<h4 data-primitive-type="String"><code>gtm code</code></h4>
+
+Your GTM CODE will default to `process.env.GTM_CODE`.
+
 ### Google Analytics
 
 Keystone has support for Google Analytics tracking in the Admin UI. To enable tracking, set the following configuration options:

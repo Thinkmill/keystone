@@ -8,8 +8,23 @@
     <link rel="stylesheet" href="<%= codemirrorPath %>/codemirror.css">
     <link rel="stylesheet" href="<%= adminPath %>/styles/keystone.min.css">
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+<% if (env === 'production' && gtmCode) { -%>
+    <script>
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','<%= gtmCode %>');
+    </script>
+<% } -%>
   </head>
   <body>
+<% if (env === 'production' && gtmCode) { -%>
+    <noscript>
+        <iframe src="//www.googletagmanager.com/ns.html?id=<%= gtmCode %>"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+<% } -%>
 <%# React Mount Element %>
     <div id="react-root"></div>
 <%# Keystone Config %>
